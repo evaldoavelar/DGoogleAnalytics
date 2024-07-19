@@ -20,7 +20,7 @@ type
     destructor Destroy; override;
     class function New(AParent: iControllerGoogleAnalytics): iModelGooglePageView;
 
-    //iModelGooglePageView
+    // iModelGooglePageView
     function DocumentHostName: String; overload;
     function DocumentHostName(Value: String): iModelGooglePageView; overload;
     function Page: String; overload;
@@ -29,7 +29,7 @@ type
     function Title(Value: String): iModelGooglePageView; overload;
     function Send: iCommand;
 
-    //iCommand
+    // iCommand
     function Execute: iCommand;
   End;
 
@@ -38,11 +38,11 @@ implementation
 { TModelGoogleAnalyticsPageView }
 
 uses
-  System.Net.HttpClientComponent, System.Classes, System.SysUtils;
+  System.Net.HttpClientComponent, System.Classes, System.SysUtils, System.JSON, Winapi.Windows;
 
 constructor TModelGoogleAnalyticsPageView.Create(AParent: iControllerGoogleAnalytics);
 begin
-  FParent :=  AParent;
+  FParent := AParent;
 end;
 
 destructor TModelGoogleAnalyticsPageView.Destroy;
@@ -54,74 +54,75 @@ end;
 function TModelGoogleAnalyticsPageView.Execute: iCommand;
 var
   HTTPClient: TNetHTTPClient;
-  Params: TStringList;
+  JSONObj: TJSONObject;
+  JSONEvent: TJSONObject;
+  JSONParams: TJSONObject;
+  JSONArray: TJSONArray;
+  JSON: TStringStream;
 begin
-  Result  :=  Self;
-
-  HTTPClient:= TNetHTTPClient.Create(nil);
+  Result := Self;
+  JSON := nil;
+  HTTPClient := TNetHTTPClient.Create(nil);
   try
-    Params := TStringList.Create;
+    JSONObj := TJSONObject.Create;
+
+    JSONObj.AddPair('client_id', FParent.ClienteID);
+    if FParent.UserID <> '' then
+      JSONObj.AddPair('user_id', FParent.UserID);
+
+    // JSONObj.AddPair('non_personalized_ads', 'false');
+
+    (* Event *)
+    JSONEvent := TJSONObject.Create;
+    JSONEvent.AddPair('name', 'page_view');
+    JSONParams := TJSONObject.Create;
+    JSONParams.AddPair('screen_class', FPage);
+    JSONParams.AddPair('screen_name', FTitle);
+    JSONParams.AddPair('app_name', Format('%s %s', [FParent.AppInfo.AppName, FParent.AppInfo.AppVersion]));
+    JSONParams.AddPair('screen_resolution', FParent.ScreenResolution);
+    JSONEvent.AddPair('params', JSONParams);
+
+    JSONArray := TJSONArray.Create;
+    JSONArray.Add(JSONEvent);
+    JSONObj.AddPair('events', JSONArray);
+
     try
-      Params.Values['v']  := '1';
-      Params.Values['tid']:= FParent.GooglePropertyID;
+      JSON := TStringStream.Create(JSONObj.ToString, TEncoding.UTF8);
+      OutputDebugString(PWideChar(JSONObj.ToString));
+      OutputDebugString(PWideChar(FParent.URL));
 
-      Params.Values['cid']:= FParent.ClienteID;
+      HTTPClient.ContentType := 'application/json';
+      HTTPClient.AcceptEncoding := 'utf-8';
+      var
+      status := HTTPClient.Post(FParent.URL, JSON);
 
-      if FParent.UserID <> '' then
-        Params.Values['uid']:=  FParent.UserID;
-
-      Params.Values['ul'] :=  'pt-br';
-
-      Params.Values['sr'] :=  FParent.ScreenResolution;
-
-      Params.Values['cs'] :=  Format('%s %s', [
-                                      FParent.AppInfo.AppName,
-                                      FParent.AppInfo.AppVersion
-                                      ]);
-
-      Params.Values['cm'] :=  FParent.AppInfo.AppEdition;
-
-      (*AppInfo*)
-      if FParent.AppInfo.AppName <> '' then
-        Params.Values['an'] := FParent.AppInfo.AppName;
-      if FParent.AppInfo.AppVersion <> '' then
-        Params.Values['av'] := FParent.AppInfo.AppVersion;
-      if FParent.AppInfo.AppID <> '' then
-        Params.Values['aid']  := FParent.AppInfo.AppID;
-      if FParent.AppInfo.AppInstalerID <> '' then
-        Params.Values['aiid'] := FParent.AppInfo.AppInstalerID;
-
-      (*PageView*)
-      Params.Values['t']  := 'pageview';
-      Params.Values['dh'] := FHostName;
-      Params.Values['dp'] := FPage;
-      Params.Values['dt'] := FTitle;
-      try
-        HTTPClient.Post(FParent.URL, Params, nil, TEncoding.Default);
-      except
-      end;
-    finally
-      Params.Free;
+      OutputDebugString(PWideChar(status.StatusCode.ToString));
+      OutputDebugString(PWideChar(status.ContentAsString(TEncoding.UTF8)));
+    except
     end;
   finally
     HTTPClient.Free;
+    JSONObj.Free;
+    if Assigned(JSON) then
+      JSON.Free;
   end;
 end;
 
 function TModelGoogleAnalyticsPageView.DocumentHostName: String;
 begin
-  Result  :=  FHostName;
+  Result := FHostName;
 end;
 
 function TModelGoogleAnalyticsPageView.DocumentHostName(
   Value: String): iModelGooglePageView;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FHostName :=  Value;
+  FHostName := Value;
 end;
 
-class function TModelGoogleAnalyticsPageView.New(AParent: iControllerGoogleAnalytics): iModelGooglePageView;
+class
+  function TModelGoogleAnalyticsPageView.New(AParent: iControllerGoogleAnalytics): iModelGooglePageView;
 begin
   Result := Self.Create(AParent);
 end;
@@ -129,33 +130,32 @@ end;
 function TModelGoogleAnalyticsPageView.Page(
   Value: String): iModelGooglePageView;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FPage :=  Value;
+  FPage := Value;
 end;
 
 function TModelGoogleAnalyticsPageView.Page: String;
 begin
-  Result  :=  FPage;
+  Result := FPage;
 end;
 
 function TModelGoogleAnalyticsPageView.Send: iCommand;
 begin
-  Result  :=  Self;
+  Result := Self;
 end;
 
 function TModelGoogleAnalyticsPageView.Title(
   Value: String): iModelGooglePageView;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FTitle :=  Value;
+  FTitle := Value;
 end;
 
 function TModelGoogleAnalyticsPageView.Title: String;
 begin
-  Result  :=  FTitle;
+  Result := FTitle;
 end;
 
 end.
-

@@ -17,9 +17,11 @@ type
     function AppInfo: iModelGoogleAppInfo;
     function ScreeView(AParent: iControllerGoogleAnalytics): iModelGoogleScreeView;
     function PageView(AParent: iControllerGoogleAnalytics): iModelGooglePageView;
-    function Session(AParent:iControllerGoogleAnalytics): iModelGoogleSession;
-    function Event(AParent:iControllerGoogleAnalytics): iModelGoogleEvent;
+    function Event(AParent: iControllerGoogleAnalytics): iModelGoogleEvent;
     function Exception(AParent: iControllerGoogleAnalytics): iModelGoogleException;
+    function Login(AParent: iControllerGoogleAnalytics): iModelGoogleLogin;
+    function Purchase(AParent: iControllerGoogleAnalytics): iModelGooglePurchase;
+    function AddPayment(AParent: iControllerGoogleAnalytics): iModelGoogleAddPayment;
   End;
 
 implementation
@@ -29,15 +31,22 @@ uses
   Google.Model.Analytics.Event,
   Google.Model.Analytics.Exception,
   Google.Model.Analytics.PageView,
-  Google.Model.Analytics.ScreenView,
-  Google.Model.Analytics.Session;
-
+  Google.Model.Analytics.Login,
+  Google.Model.Analytics.Purchase,
+  Google.Model.Analytics.PaymentInfo,
+  Google.Model.Analytics.ScreenView;
 
 { TModelGoogleAnalyticsFactory }
 
+function TModelGoogleAnalyticsFactory.AddPayment(
+  AParent: iControllerGoogleAnalytics): iModelGoogleAddPayment;
+begin
+  Result := TModelGooglePaymentInfo.New(AParent);
+end;
+
 function TModelGoogleAnalyticsFactory.AppInfo: iModelGoogleAppInfo;
 begin
-  Result  :=  TModelGoogleAppInfo.New;
+  Result := TModelGoogleAppInfo.New;
 end;
 
 constructor TModelGoogleAnalyticsFactory.Create;
@@ -54,13 +63,19 @@ end;
 function TModelGoogleAnalyticsFactory.Event(
   AParent: iControllerGoogleAnalytics): iModelGoogleEvent;
 begin
-  Result  :=  TModelGoogleAnalyticsEvent.New(AParent);
+  Result := TModelGoogleAnalyticsEvent.New(AParent);
 end;
 
 function TModelGoogleAnalyticsFactory.Exception(
   AParent: iControllerGoogleAnalytics): iModelGoogleException;
 begin
-  Result  :=  TModelGoogleAnalyticsException.New(AParent);
+  Result := TModelGoogleAnalyticsException.New(AParent);
+end;
+
+function TModelGoogleAnalyticsFactory.Login(
+  AParent: iControllerGoogleAnalytics): iModelGoogleLogin;
+begin
+  Result := TModelGoogleAnalyticsLogin.New(AParent);
 end;
 
 class function TModelGoogleAnalyticsFactory.New: iModelGoogleAnalyticsFactory;
@@ -71,20 +86,19 @@ end;
 function TModelGoogleAnalyticsFactory.PageView(
   AParent: iControllerGoogleAnalytics): iModelGooglePageView;
 begin
-  Result  :=  TModelGoogleAnalyticsPageView.New(AParent);
+  Result := TModelGoogleAnalyticsPageView.New(AParent);
+end;
+
+function TModelGoogleAnalyticsFactory.Purchase(
+  AParent: iControllerGoogleAnalytics): iModelGooglePurchase;
+begin
+  Result := TModelGoogleAnalyticsPurchase.New(AParent);
 end;
 
 function TModelGoogleAnalyticsFactory.ScreeView(
   AParent: iControllerGoogleAnalytics): iModelGoogleScreeView;
 begin
-  Result  :=  TModelGoogleAnalyticsScreenView.New(AParent);
-end;
-
-function TModelGoogleAnalyticsFactory.Session(
-  AParent: iControllerGoogleAnalytics): iModelGoogleSession;
-begin
-  Result  :=  TModelGoogleAnalyticsSession.New(AParent);
+  Result := TModelGoogleAnalyticsScreenView.New(AParent);
 end;
 
 end.
-

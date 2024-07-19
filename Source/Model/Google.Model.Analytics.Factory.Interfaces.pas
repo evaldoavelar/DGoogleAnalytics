@@ -12,9 +12,11 @@ type
     function AppInfo: iModelGoogleAppInfo;
     function ScreeView(AParent: iControllerGoogleAnalytics): iModelGoogleScreeView;
     function PageView(AParent: iControllerGoogleAnalytics): iModelGooglePageView;
-    function Session(AParent:iControllerGoogleAnalytics): iModelGoogleSession;
-    function Event(AParent:iControllerGoogleAnalytics): iModelGoogleEvent;
+    function Event(AParent: iControllerGoogleAnalytics): iModelGoogleEvent;
     function Exception(AParent: iControllerGoogleAnalytics): iModelGoogleException;
+    function Login(AParent: iControllerGoogleAnalytics): iModelGoogleLogin;
+    function Purchase(AParent: iControllerGoogleAnalytics): iModelGooglePurchase;
+    function AddPayment(AParent: iControllerGoogleAnalytics): iModelGoogleAddPayment;
   end;
 
 implementation

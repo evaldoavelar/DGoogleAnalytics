@@ -21,7 +21,7 @@ type
     destructor Destroy; override;
     class function New(AParent: iControllerGoogleAnalytics): iModelGoogleEvent;
 
-    //iModelGoogleEvent
+    // iModelGoogleEvent
     function Category: String; overload;
     function Category(Value: String): iModelGoogleEvent; overload;
     function Action: String; overload;
@@ -32,7 +32,7 @@ type
     function EventValue(Value: Integer): iModelGoogleEvent; overload;
     function Send: iCommand;
 
-    //iCommand
+    // iCommand
     function Execute: iCommand;
   End;
 
@@ -41,35 +41,35 @@ implementation
 { TModelGoogleAnalyticsEvent }
 
 uses
-  System.Net.HttpClientComponent, System.Classes, System.SysUtils;
+  System.Net.HttpClientComponent, System.Classes, System.SysUtils, System.JSON, Winapi.Windows;
 
 function TModelGoogleAnalyticsEvent.Action(Value: String): iModelGoogleEvent;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FAction :=  Value;
+  FAction := Value;
 end;
 
 function TModelGoogleAnalyticsEvent.Action: String;
 begin
-  Result  :=  FAction;
+  Result := FAction;
 end;
 
 function TModelGoogleAnalyticsEvent.Category: String;
 begin
-  Result  :=  FCategory;
+  Result := FCategory;
 end;
 
 function TModelGoogleAnalyticsEvent.Category(Value: String): iModelGoogleEvent;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FCategory :=  Value;
+  FCategory := Value;
 end;
 
 constructor TModelGoogleAnalyticsEvent.Create(AParent: iControllerGoogleAnalytics);
 begin
-  FParent :=  AParent;
+  FParent := AParent;
 end;
 
 destructor TModelGoogleAnalyticsEvent.Destroy;
@@ -81,78 +81,83 @@ end;
 function TModelGoogleAnalyticsEvent.EventLabel(
   Value: String): iModelGoogleEvent;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FEventLabel :=  Value;
+  FEventLabel := Value;
 end;
 
 function TModelGoogleAnalyticsEvent.EventLabel: String;
 begin
-  Result  :=  FEventLabel;
+  Result := FEventLabel;
 end;
 
 function TModelGoogleAnalyticsEvent.EventValue: Integer;
 begin
-  Result  :=  FEventValue;
+  Result := FEventValue;
 end;
 
 function TModelGoogleAnalyticsEvent.EventValue(
   Value: Integer): iModelGoogleEvent;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FEventValue :=  Value;
+  FEventValue := Value;
 end;
 
 function TModelGoogleAnalyticsEvent.Execute: iCommand;
 var
   HTTPClient: TNetHTTPClient;
-  Params: TStringList;
+  JSONObj: TJSONObject;
+  JSONEvent: TJSONObject;
+  JSONParams: TJSONObject;
+  JSONArray: TJSONArray;
+  JSON: TStringStream;
 begin
-  Result  :=  Self;
-
-  HTTPClient:= TNetHTTPClient.Create(nil);
+  Result := Self;
+  JSON := nil;
+  HTTPClient := TNetHTTPClient.Create(nil);
   try
-    Params := TStringList.Create;
+    JSONObj := TJSONObject.Create;
+
+    JSONObj.AddPair('client_id', FParent.ClienteID);
+    if FParent.UserID <> '' then
+      JSONObj.AddPair('user_id', FParent.UserID);
+
+    JSONObj.AddPair('non_personalized_ads', 'false');
+
+    (* Event *)
+    JSONEvent := TJSONObject.Create;
+    JSONEvent.AddPair('name', FCategory);
+    JSONParams := TJSONObject.Create;
+    JSONParams.AddPair('action', FAction);
+    JSONParams.AddPair(FEventLabel, FEventValue.ToString);
+    JSONEvent.AddPair('params', JSONParams);
+
+    JSONArray := TJSONArray.Create;
+    JSONArray.Add(JSONEvent);
+    JSONObj.AddPair('events', JSONArray);
+
     try
-      Params.Values['v']  :=  '1';
-      Params.Values['tid']:=  FParent.GooglePropertyID;
+      JSON := TStringStream.Create(JSONObj.ToString, TEncoding.UTF8);
+      OutputDebugString(PWideChar(JSONObj.ToString));
 
-      Params.Values['cid']:= FParent.ClienteID;
+      HTTPClient.ContentType := 'application/json';
+      HTTPClient.AcceptEncoding := 'utf-8';
+      var
+      status := HTTPClient.Post(FParent.URL, JSON);
 
-      if FParent.UserID <> '' then
-        Params.Values['uid']:=  FParent.UserID;
-
-      Params.Values['ul'] :=  'pt-br';
-
-      Params.Values['sr'] :=  FParent.ScreenResolution;
-
-      Params.Values['cs'] :=  Format('%s %s', [
-                                      FParent.AppInfo.AppName,
-                                      FParent.AppInfo.AppVersion
-                                      ]);
-
-      Params.Values['cm'] :=  FParent.AppInfo.AppEdition;
-
-      (*Event*)
-      Params.Values['t']  := 'event';
-      Params.Values['ec'] := FCategory;
-      Params.Values['ea'] := FAction;
-      Params.Values['el'] := FEventLabel;
-      Params.Values['ev'] := FEventValue.ToString;
-
-      try
-        HTTPClient.Post(FParent.URL, Params, nil, TEncoding.Default);
-      except
-      end;
-    finally
-      Params.Free;
+      OutputDebugString(PWideChar(status.StatusCode.ToString));
+      OutputDebugString(PWideChar(status.ContentAsString(TEncoding.UTF8)));
+    except
     end;
   finally
     HTTPClient.Free;
+    JSONObj.Free;
+    if Assigned(JSON) then
+      JSON.Free;
   end;
-end;
 
+end;
 
 class function TModelGoogleAnalyticsEvent.New(AParent: iControllerGoogleAnalytics): iModelGoogleEvent;
 begin
@@ -161,8 +166,7 @@ end;
 
 function TModelGoogleAnalyticsEvent.Send: iCommand;
 begin
-  Result  :=  Self;
+  Result := Self;
 end;
 
 end.
-

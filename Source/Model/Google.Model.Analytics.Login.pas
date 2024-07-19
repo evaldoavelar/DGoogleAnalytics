@@ -1,4 +1,4 @@
-unit Google.Model.Analytics.ScreenView;
+unit Google.Model.Analytics.Login;
 
 interface
 
@@ -7,19 +7,19 @@ uses
   Google.Controller.Analytics.Interfaces;
 
 type
-  TModelGoogleAnalyticsScreenView = Class(TInterfacedObject, iModelGoogleScreeView, iCommand)
+  TModelGoogleAnalyticsLogin = Class(TInterfacedObject, iModelGoogleLogin, iCommand)
   private
     [weak]
     FParent: iControllerGoogleAnalytics;
-    FScreenName: String;
+    FMethod: String;
   public
     constructor Create(AParent: iControllerGoogleAnalytics);
     destructor Destroy; override;
-    class function New(AParent: iControllerGoogleAnalytics): iModelGoogleScreeView;
+    class function New(AParent: iControllerGoogleAnalytics): iModelGoogleLogin;
 
-    // iGoogleScreeView
-    function ScreenName: String; overload;
-    function ScreenName(Value: String): iModelGoogleScreeView; overload;
+    // iModelGoogleLogin
+    function Method: String; overload;
+    function Method(Value: String): iModelGoogleLogin; overload;
     function Send: iCommand;
 
     // iCommand
@@ -28,26 +28,29 @@ type
 
 implementation
 
-{ TModelGoogleAnalyticsScreenView }
-
 uses
-  System.Net.HttpClientComponent, System.Classes, System.SysUtils, System.JSON, Winapi.Windows;
+  System.Net.HttpClientComponent, System.Classes, System.SysUtils,
+  System.StrUtils, System.JSON, Winapi.Windows;
 
-constructor TModelGoogleAnalyticsScreenView.Create(AParent: iControllerGoogleAnalytics);
+{ TModelGoogleAnalyticsException }
+
+constructor TModelGoogleAnalyticsLogin.Create(
+  AParent: iControllerGoogleAnalytics);
 begin
   FParent := AParent;
 end;
 
-destructor TModelGoogleAnalyticsScreenView.Destroy;
+destructor TModelGoogleAnalyticsLogin.Destroy;
 begin
 
   inherited;
 end;
 
-function TModelGoogleAnalyticsScreenView.Execute: iCommand;
+function TModelGoogleAnalyticsLogin.Execute: iCommand;
 var
   HTTPClient: TNetHTTPClient;
   JSONObj: TJSONObject;
+  JSONUserData: TJSONObject;
   JSONEvent: TJSONObject;
   JSONParams: TJSONObject;
   JSONArray: TJSONArray;
@@ -60,18 +63,18 @@ begin
     JSONObj := TJSONObject.Create;
 
     JSONObj.AddPair('client_id', FParent.ClienteID);
+
     if FParent.UserID <> '' then
       JSONObj.AddPair('user_id', FParent.UserID);
 
-    JSONObj.AddPair('non_personalized_ads', 'false');
+    // JSONObj.AddPair('non_personalized_ads', 'false');
 
     (* Event *)
     JSONEvent := TJSONObject.Create;
-    JSONEvent.AddPair('name', 'screen_view');
+    JSONEvent.AddPair('name', 'login');
     JSONParams := TJSONObject.Create;
-    JSONParams.AddPair('screen_name', FScreenName);
+    JSONParams.AddPair('method', FMethod);
     JSONParams.AddPair('app_name', Format('%s %s', [FParent.AppInfo.AppName, FParent.AppInfo.AppVersion]));
-    JSONParams.AddPair('screen_resolution', FParent.ScreenResolution);
     JSONEvent.AddPair('params', JSONParams);
 
     JSONArray := TJSONArray.Create;
@@ -98,29 +101,31 @@ begin
     if Assigned(JSON) then
       JSON.Free;
   end;
+
 end;
 
-class function TModelGoogleAnalyticsScreenView.New(AParent: iControllerGoogleAnalytics): iModelGoogleScreeView;
+function TModelGoogleAnalyticsLogin.Method: String;
+begin
+  Result := FMethod;
+end;
+
+function TModelGoogleAnalyticsLogin.Method(
+  Value: String): iModelGoogleLogin;
+begin
+  Result := Self;
+
+  FMethod := Value;
+end;
+
+class function TModelGoogleAnalyticsLogin.New(
+  AParent: iControllerGoogleAnalytics): iModelGoogleLogin;
 begin
   Result := Self.Create(AParent);
 end;
 
-function TModelGoogleAnalyticsScreenView.ScreenName(
-  Value: String): iModelGoogleScreeView;
+function TModelGoogleAnalyticsLogin.Send: iCommand;
 begin
   Result := Self;
-
-  FScreenName := Value;
-end;
-
-function TModelGoogleAnalyticsScreenView.Send: iCommand;
-begin
-  Result := Self;
-end;
-
-function TModelGoogleAnalyticsScreenView.ScreenName: String;
-begin
-  Result := FScreenName;
 end;
 
 end.

@@ -18,14 +18,14 @@ type
     destructor Destroy; override;
     class function New(AParent: iControllerGoogleAnalytics): iModelGoogleException;
 
-    //iModelGoogleException
+    // iModelGoogleException
     function Description: String; overload;
     function Description(Value: String): iModelGoogleException; overload;
     function isFatal: Boolean; overload;
     function isFatal(Value: Boolean): iModelGoogleException; overload;
     function Send: iCommand;
 
-    //iCommand
+    // iCommand
     function Execute: iCommand;
   End;
 
@@ -34,24 +34,25 @@ implementation
 { TModelGoogleAnalyticsException }
 
 uses
-  System.Net.HttpClientComponent, System.Classes, System.SysUtils, System.StrUtils;
+  System.Net.HttpClientComponent, System.Classes, System.SysUtils,
+  System.StrUtils, System.JSON, Winapi.Windows;
 
 constructor TModelGoogleAnalyticsException.Create(AParent: iControllerGoogleAnalytics);
 begin
-  FParent :=  AParent;
+  FParent := AParent;
 end;
 
 function TModelGoogleAnalyticsException.Description: String;
 begin
-  Result  :=  FDescription;
+  Result := FDescription;
 end;
 
 function TModelGoogleAnalyticsException.Description(
   Value: String): iModelGoogleException;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FDescription  :=  Value;
+  FDescription := Value;
 end;
 
 destructor TModelGoogleAnalyticsException.Destroy;
@@ -63,60 +64,71 @@ end;
 function TModelGoogleAnalyticsException.Execute: iCommand;
 var
   HTTPClient: TNetHTTPClient;
-  Params: TStringList;
+  JSONObj: TJSONObject;
+  JSONEvent: TJSONObject;
+  JSONParams: TJSONObject;
+  JSONArray: TJSONArray;
+  JSON: TStringStream;
 begin
-  Result  :=  Self;
-
-  HTTPClient:= TNetHTTPClient.Create(nil);
+  Result := Self;
+  JSON := nil;
+  HTTPClient := TNetHTTPClient.Create(nil);
   try
-    Params := TStringList.Create;
+    JSONObj := TJSONObject.Create;
+
+    JSONObj.AddPair('client_id', FParent.ClienteID);
+    if FParent.UserID <> '' then
+      JSONObj.AddPair('user_id', FParent.UserID);
+
+    // JSONObj.AddPair('non_personalized_ads', 'false');
+
+    (* Event *)
+    JSONEvent := TJSONObject.Create;
+    JSONEvent.AddPair('name', 'exception');
+    JSONParams := TJSONObject.Create;
+    JSONParams.AddPair('description', FDescription);
+    JSONParams.AddPair('fatal', IfThen(FisFatal, '1', '0'));
+    JSONParams.AddPair('app_name', Format('%s %s', [FParent.AppInfo.AppName, FParent.AppInfo.AppVersion]));
+    JSONParams.AddPair('screen_resolution', FParent.ScreenResolution);
+    JSONEvent.AddPair('params', JSONParams);
+
+    JSONArray := TJSONArray.Create;
+    JSONArray.Add(JSONEvent);
+    JSONObj.AddPair('events', JSONArray);
+
+
     try
-      Params.Values['v']  := '1';
-      Params.Values['tid']:= FParent.GooglePropertyID;
+      JSON := TStringStream.Create(JSONObj.ToString, TEncoding.UTF8);
+      OutputDebugString(PWideChar(JSONObj.ToString));
 
-      Params.Values['cid']:= FParent.ClienteID;
+      HTTPClient.ContentType := 'application/json';
+      HTTPClient.AcceptEncoding := 'utf-8';
+      var
+      status := HTTPClient.Post(FParent.URL, JSON);
 
-      if FParent.UserID <> '' then
-        Params.Values['uid']:=  FParent.UserID;
-
-      Params.Values['ul'] :=  'pt-br';
-
-      Params.Values['sr'] :=  FParent.ScreenResolution;
-
-      Params.Values['cs'] :=  Format('%s %s', [
-                                      FParent.AppInfo.AppName,
-                                      FParent.AppInfo.AppVersion
-                                      ]);
-
-      Params.Values['cm'] :=  FParent.AppInfo.AppEdition;
-
-      Params.Values['t']  := 'exception';
-      Params.Values['exd'] := FDescription;
-      Params.Values['exf'] := IfThen(FisFatal, '1', '0');
-
-      try
-        HTTPClient.Post(FParent.URL, Params, nil, TEncoding.Default);
-      except
-      end;
-    finally
-      Params.Free;
+      OutputDebugString(PWideChar(status.StatusCode.ToString));
+      OutputDebugString(PWideChar(status.ContentAsString(TEncoding.UTF8)));
+    except
     end;
   finally
     HTTPClient.Free;
+    JSONObj.Free;
+    if Assigned(JSON) then
+      JSON.Free;
   end;
 end;
 
 function TModelGoogleAnalyticsException.isFatal: Boolean;
 begin
-  Result  :=  FisFatal;
+  Result := FisFatal;
 end;
 
 function TModelGoogleAnalyticsException.isFatal(
   Value: Boolean): iModelGoogleException;
 begin
-  Result  :=  Self;
+  Result := Self;
 
-  FisFatal  :=  Value;
+  FisFatal := Value;
 end;
 
 class function TModelGoogleAnalyticsException.New(AParent: iControllerGoogleAnalytics): iModelGoogleException;
@@ -126,8 +138,7 @@ end;
 
 function TModelGoogleAnalyticsException.Send: iCommand;
 begin
-  Result  :=  Self;
+  Result := Self;
 end;
 
 end.
-
