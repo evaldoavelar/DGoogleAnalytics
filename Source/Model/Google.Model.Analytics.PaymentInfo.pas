@@ -259,15 +259,15 @@ begin
 
     try
       JSON := TStringStream.Create(JSONObj.ToString, TEncoding.UTF8);
-      OutputDebugString(PWideChar(JSONObj.ToString));
+      //OutputDebugString(PWideChar(JSONObj.ToString));
 
       HTTPClient.ContentType := 'application/json';
       HTTPClient.AcceptEncoding := 'utf-8';
       var
       status := HTTPClient.Post(FParent.URL, JSON);
 
-      OutputDebugString(PWideChar(status.StatusCode.ToString));
-      OutputDebugString(PWideChar(status.ContentAsString(TEncoding.UTF8)));
+      //OutputDebugString(PWideChar(status.StatusCode.ToString));
+      //OutputDebugString(PWideChar(status.ContentAsString(TEncoding.UTF8)));
     except
     end;
   finally
